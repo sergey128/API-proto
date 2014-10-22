@@ -1,58 +1,74 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Data.Entity;
-using System.Data.Entity.Infrastructure;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
+﻿using System.Collections.Generic;
+using System.Configuration;
+using System.Data.SqlClient;
+using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Description;
-using System.Threading.Tasks;
 
 namespace AIG.Science.Backend.Controllers
 {
     public class ProductsAsyncController : ApiController
     {
-        NORTHWNDEntities db = new NORTHWNDEntities();
-
         // GET: api/Products
-        public IQueryable<Product> GetProducts()
+        public async Task<IEnumerable<Models.Product>> GetProducts()
         {
-            return db.Products;
+            using (var connection = new SqlConnection(ConfigurationManager.ConnectionStrings["NORTHWNDEntitiesAsync"].ConnectionString))
+            {
+                await connection.OpenAsync();
+
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "select * from [dbo].[Products]";
+
+                    SqlDataReader reader = await command.ExecuteReaderAsync();
+
+                    var result = new List<Models.Product>();
+                    while (await reader.ReadAsync())
+                        result.Add(await ReadProductAsync(reader));
+
+                    return result;
+                }
+            }
         }
 
         // GET: api/Products/5
         [ResponseType(typeof(Models.Product))]
         public async Task<IHttpActionResult> GetProduct(int id)
         {
-            var query = db.Products.Where(x => x.ProductID == id);
-            var resultSet = await query.ExecuteAsync<Product>();
-            var product = resultSet.SingleOrDefault();
-
-            if (product == null)
+            using (var connection = new SqlConnection(ConfigurationManager.ConnectionStrings["NORTHWNDEntitiesAsync"].ConnectionString))
             {
-                return NotFound();
+                await connection.OpenAsync();
+
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "select * from [dbo].[Products] where ProductId=@id";
+                    command.Parameters.AddWithValue("id", id);
+
+                    SqlDataReader reader = await command.ExecuteReaderAsync();
+
+                    var result = ReadProductAsync(reader);
+                    if (result != null)
+                        return Ok(result);
+                    else
+                        return NotFound();
+                }
             }
-
-            var result = new Models.Product
-            {
-                ProductID = product.ProductID,
-                ProductName = product.ProductName,
-                UnitPrice = product.UnitPrice,
-                UnitsInStock = product.UnitsInStock
-            };
-            return Ok(result);
         }
 
-        protected override void Dispose(bool disposing)
+        async Task<Models.Product> ReadProductAsync(SqlDataReader reader)
         {
-            if (disposing)
+            if (await reader.ReadAsync())
             {
-                db.Dispose();
+                var result = new Models.Product
+                {
+                    ProductID = (int)reader["ProductID"],
+                    ProductName = reader["ProductName"] as string,
+                    UnitPrice = reader["UnitPrice"] as decimal?,
+                    UnitsInStock = reader["UnitsInStock"] as short?
+                };
+                return result;
             }
-            base.Dispose(disposing);
+            return null;
         }
-
     }
 }

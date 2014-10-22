@@ -25,5 +25,15 @@ namespace AIG.Science.Backend.Test
                 Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
             }
         }
+
+
+        [Fact]
+        public void Async_GetProducts_Returns_Result_Set()
+        {
+            using (HttpResponseMessage response = client.GetAsync("api/productsAsync").Result)
+            {
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            }
+        }
     }
 }
