@@ -46,7 +46,7 @@ namespace AIG.Science.Backend.Controllers
 
                     SqlDataReader reader = await command.ExecuteReaderAsync();
 
-                    var result = ReadProductAsync(reader);
+                    var result = ReadProductAsync(reader).Result;
                     if (result != null)
                         return Ok(result);
                     else
