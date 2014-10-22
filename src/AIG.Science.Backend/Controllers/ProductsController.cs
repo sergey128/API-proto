@@ -17,9 +17,15 @@ namespace AIG.Science.Backend.Controllers
         NORTHWNDEntities db = new NORTHWNDEntities();
 
         // GET: api/Products
-        public IQueryable<Product> GetProducts()
+        public IQueryable<Models.Product> GetProducts()
         {
-            return db.Products;
+            return db.Products.Select(product => new Models.Product
+            {
+                ProductID = product.ProductID,
+                ProductName = product.ProductName,
+                UnitPrice = product.UnitPrice,
+                UnitsInStock = product.UnitsInStock
+            });
         }
 
         // GET: api/Products/5
